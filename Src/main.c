@@ -38,7 +38,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_hal.h"
-
+#define LEN 9
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -67,6 +67,8 @@ static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
+
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -74,12 +76,24 @@ __IO uint32_t ADCvalue[2];
 u_int8_t RcvData[32];
 u_int8_t* currentline;
 float data[2];
-int len;
 
 /* USER CODE END 0 */
 float floatmap(float x, float inMin, float inMax, float outMin, float outMax)
 {
   return (x-inMin)*(outMax-outMin)/(inMax-inMin)+outMin;
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+	/* USER CODE END WHILE */
+	data[0] = floatmap(ADCvalue[0], 0, 4095, 0, 3.3);
+	sprintf(currentline, "s%f", data[0]);
+	HAL_UART_Transmit_DMA(&huart1, currentline, LEN);
+
+	data[1] = floatmap(ADCvalue[1], 0, 4095, 0, 3.3);
+	sprintf(currentline, "e%f", data[1]);
+	HAL_UART_Transmit_DMA(&huart1, currentline, LEN);
+
 }
 
 int main(void)
@@ -115,25 +129,14 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
+  HAL_ADCEx_Calibration_Start(&hadc1);
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	HAL_ADC_Start_DMA(&hadc1, ADCvalue, 2);
-	HAL_ADCEx_Calibration_Start(&hadc1);
-	/* USER CODE END WHILE */
-	data[0] = floatmap(ADCvalue[0], 0, 4095, 0, 3.3);
-	sprintf(currentline, "s%f", data[0]);
-	len = strlen(currentline);
-	HAL_UART_Transmit_DMA(&huart1, currentline, len);
-	HAL_Delay(20);
+	  HAL_ADC_Start_DMA(&hadc1, ADCvalue, 2);
 
-	data[1] = floatmap(ADCvalue[1], 0, 4095, 0, 3.3);
-	sprintf(currentline, "e%f", data[1]);
-	len = strlen(currentline);
-	HAL_UART_Transmit_DMA(&huart1, currentline, len);
-	HAL_Delay(20);
 	/* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -261,7 +264,7 @@ static void MX_USART2_UART_Init(void)
 {
 
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 9600;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
